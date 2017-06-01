@@ -164,20 +164,33 @@ def expectedError(data, w_hat):
     return error / float(len(data))
 
 # In[]
-def analysis():
+def analysis(dist_type):
     dim_X = 5
     dim_C = 6
-    n_train = [50, 100, 500, 1000]
-    T = n_train + 1
+    n_train_arr = [50, 100, 500, 1000]
     n_test = 400
     std = [0.05, 0.3]
-    var = np.square(std)
-    
+    var_arr = np.square(std)
+    num_iter = 30
     mean = 1.0/5.0
-    data_test = getTestData(mean, var, dim_X, n_test)
-    w_hat, Wt_s, data = SGD(mean, var, dim_X, dim_C,T,dist_type)
-    
-    dist_type = ["box","ball"]
-    
+    for var in var_arr:
+        for n_train in n_train_arr:
+            T = n_train + 1
+            data_test = getTestData(mean, var, dim_X, n_test)
+            expLoss_train = []
+            expError_train = []
+            expLoss_test = []
+            expError_test = []
+            for _i in range(num_iter):
+                w_hat, Wt_s, data_train = SGD(mean, var, dim_X, dim_C,T,dist_type)
+                expLoss_train  += [expectedLoss(data_train, w_hat)]
+                expError_train += [expectedError(data_train, w_hat)]
+                expLoss_test   += [expectedLoss(data_test, w_hat)]
+                expError_test  += [expectedError(data_test, w_hat)]
+            
+
+dist_type = ["box","ball"]
+analysis(dist_type[0])
+analysis(dist_type[1])
     
     
