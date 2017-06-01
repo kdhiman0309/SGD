@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
+CSE 250C HW 3
 
-This is a temporary script file.
 """
 # In[]
 import numpy as np
@@ -80,11 +79,8 @@ def computeGrad(w,x,y):
     t = np.exp(-1.0 * y_p * y)
     return - y* x * t / (1+t)
 
-def updateW(w, X, y, a_t):
-    return w - a_t * computeGrad(w,X,y)
-
 def calculateWHat(W):
-    return np.mean(W)
+    return np.mean(W, axis=0).reshape((1,-1))
 
 def loss(w,X,y):
     y_p = np.dot(X,w.T)
@@ -98,7 +94,8 @@ def error(w,X,y):
 def oracle(mean, var, dim):
     y = 1.0 if (np.random.uniform(0.0,1.0,1) > 0.5) else -1.0
     cov = np.identity(dim) * var
-    z = np.random.multivariate_normal(mean * y, cov, 1)
+    mean = [mean]*dim
+    z = np.random.multivariate_normal(mean, cov, 1)
     z = np.insert(z,0,1)
     return z, y
 
@@ -128,7 +125,7 @@ def SGD_step(w_t, alpha_t, z, y, dist_type):
 
 def SGD(mean, var, dim_X, dim_C,T,dist_type):
     
-    alpha = getAlpha(dist_type)
+    alpha = getAlpha(dim_C, T, dist_type)
     Wt_s = []
     w = np.zeros((dim_C,1))
     Wt_s.append(w)
@@ -150,44 +147,60 @@ def getTestData(mean, var, dim, size):
     return data
 
 def expectedLoss(data, w_hat):
-    loss = 0
+    _loss = 0.0
     for (X,y) in data:
-        loss += loss(w_hat, X, y)
+        _loss += loss(w_hat, X, y)
     
-    return loss / float(len(data))
+    return _loss / float(len(data))
 
 def expectedError(data, w_hat):
-    error = 0
+    _error = 0.0
     for (X,y) in data:
-        error += 1.0 if error(w_hat, X, y) else 0.0
+        _error += 1.0 if error(w_hat, X, y) else 0.0
     
-    return error / float(len(data))
+    return _error / float(len(data))
+
+def calulate_min_avg_std(X):
+    return np.min(X), np.mean(X), np.std(X)
 
 # In[]
 def analysis(dist_type):
+    print "analysis for ",dist_type
     dim_X = 5
     dim_C = 6
     n_train_arr = [50, 100, 500, 1000]
     n_test = 400
+            
     std = [0.05, 0.3]
     var_arr = np.square(std)
     num_iter = 30
     mean = 1.0/5.0
     for var in var_arr:
+        print "var=",var
+        data_test = getTestData(mean, var, dim_X, n_test)
         for n_train in n_train_arr:
+            print "n_train=",n_train
             T = n_train + 1
-            data_test = getTestData(mean, var, dim_X, n_test)
-            expLoss_train = []
-            expError_train = []
+            #expLoss_train = []
+            #expError_train = []
             expLoss_test = []
             expError_test = []
             for _i in range(num_iter):
                 w_hat, Wt_s, data_train = SGD(mean, var, dim_X, dim_C,T,dist_type)
-                expLoss_train  += [expectedLoss(data_train, w_hat)]
-                expError_train += [expectedError(data_train, w_hat)]
+                #expLoss_train  += [expectedLoss(data_train, w_hat)]
+                #expError_train += [expectedError(data_train, w_hat)]
                 expLoss_test   += [expectedLoss(data_test, w_hat)]
                 expError_test  += [expectedError(data_test, w_hat)]
+            min_risk_loss, avg_risk_loss, std_risk_loss \
+                            = calulate_min_avg_std(expLoss_test)
             
+            min_class_error, avg_class_error, std_class_error \
+                            = calulate_min_avg_std(expError_test)
+            
+            expected_avg_risk_loss = avg_risk_loss - min_risk_loss
+            expected_avg_class_error = avg_class_error
+            print "expected_avg_risk_loss",expected_avg_risk_loss
+            print "expected_avg_class_error",expected_avg_class_error
 
 dist_type = ["box","ball"]
 analysis(dist_type[0])
