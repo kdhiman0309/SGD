@@ -14,7 +14,8 @@ import seaborn as sns
 # In[]
 '''
 def getDist(var, size):
-    
+    dim_X = 5
+    mean = 1
     mean_n = [-mean]*dim_X
     mean_p = [mean]*dim_X
     ones = np.random.uniform(0.0,1.0,size) > 0.5
@@ -35,17 +36,18 @@ def getDist(var, size):
             X[i] = D1[j1]
             j1 = j1 + 1
     return X,y
-'''
+
 # In[]
 def plotDist(X, a=1):
     sns.set(color_codes=True)
     sns.distplot(X[:,a]);
 
 # In[]
-'''
-dist_X,dist_y = getDist(var,n_train+n_test);
+
+dist_X,dist_y = getDist(1,1000);
 #X_test,y_test   = getDist(var,n_test);
-plotDist(X_train)
+plt.plot(dist_X[:,:2],'.')
+plt.show()
 '''
 # In[]         
 def isOutOfSet_hypercube(x):
@@ -73,14 +75,23 @@ def projectBack_ball(x):
         x = x / nrm;
     return x
 
+def project(w, dist_type):
+    w = w.reshape((-1,1))
+    if dist_type == "box":
+        if isOutOfSet_hypercube(w):
+            return projectBack_hypercube(w)
+        
+    elif dist_type =="ball":
+        if isOutOfSet_ball(w):
+            return projectBack_ball(w)
+    w = w.reshape((1,-1))
+    return w
+
 # In[]
 def computeGrad(w,x,y):
     y_p = np.dot(x,w.T)
     t = np.exp(-1.0 * y_p * y)
     return - y* x * t / (1+t)
-
-def calculateWHat(W):
-    return np.mean(W, axis=0).reshape((1,-1))
 
 def loss(w,X,y):
     y_p = np.dot(X,w.T)
@@ -89,52 +100,47 @@ def loss(w,X,y):
         
 def error(w,X,y):
     y_p = np.dot(X,w.T)
-    return np.sign(y)==np.sign(y_p)
+    return np.sign(y)!=np.sign(y_p)
+# In[]
+def calculateWHat(W):
+    return np.mean(W, axis=0).reshape((1,-1))
 
-def oracle(mean, var, dim):
-    y = 1.0 if (np.random.uniform(0.0,1.0,1) > 0.5) else -1.0
-    cov = np.identity(dim) * var
-    mean = [mean]*dim
-    z = np.random.multivariate_normal(mean, cov, 1)
-    z = np.insert(z,0,1)
-    return z, y
-
-def project(w, dist_type):
-    if dist_type == "box":
-        if isOutOfSet_hypercube(w):
-            return projectBack_hypercube(w)
-        
-    elif dist_type =="ball":
-        if isOutOfSet_ball(w):
-            return projectBack_ball(w)
-        
-    return w
 def getAlpha(dim,T,dist_type):
     if dist_type == "box":
         return np.sqrt(dim)/(np.sqrt(dim)*np.sqrt(T))
     elif dist_type =="ball":
         return 1.0/(np.sqrt(2)*np.sqrt(T))
     return 0
+
+def oracle(mean, var, dim):
+    y = 1.0 if (np.random.uniform(0.0,1.0,1) > 0.5) else -1.0
+    cov = np.identity(dim) * var
+    mean = [mean*y]*dim
+    z = np.random.multivariate_normal(mean, cov, 1)
+    z = np.insert(z,0,1)
+    return z, y
+
 # In[]
 def SGD_step(w_t, alpha_t, z, y, dist_type):
     grad = computeGrad(w_t,z,y)
     w_t_1 = w_t - alpha_t * grad
     w_t_1 = project(w_t_1, dist_type)
-    return w_t_1
+    return w_t_1.reshape((1,-1))
 
 
-def SGD(mean, var, dim_X, dim_C,T,dist_type):
+def SGD(mean, var, dim_X, dim_C, T, dist_type):
     
     alpha = getAlpha(dim_C, T, dist_type)
     Wt_s = []
-    w = np.zeros((dim_C,1))
+    w = np.zeros((1,dim_C))
     Wt_s.append(w)
     data = []
-    for i in range(1,1,T):
+    for i in xrange(1,T,1):
         z,y = oracle(mean, var, dim_X)
         w = SGD_step(w, alpha, z, y, dist_type)
         Wt_s.append(w)
         data.append((z,y))
+        #print(w)
     w_hat = calculateWHat(Wt_s)
     return w_hat, Wt_s, data
 
@@ -173,6 +179,7 @@ def analysis(dist_type):
             
     std = [0.05, 0.3]
     var_arr = np.square(std)
+    #num_iter = 30
     num_iter = 30
     mean = 1.0/5.0
     for var in var_arr:
@@ -186,7 +193,7 @@ def analysis(dist_type):
             expLoss_test = []
             expError_test = []
             for _i in range(num_iter):
-                w_hat, Wt_s, data_train = SGD(mean, var, dim_X, dim_C,T,dist_type)
+                w_hat, Wt_s, data_train = SGD(mean, var, dim_X, dim_C, T, dist_type)
                 #expLoss_train  += [expectedLoss(data_train, w_hat)]
                 #expError_train += [expectedError(data_train, w_hat)]
                 expLoss_test   += [expectedLoss(data_test, w_hat)]
