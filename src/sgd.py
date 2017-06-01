@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats, integrate
 import matplotlib.pyplot as plt
-
+from __future__ import print_function
 import seaborn as sns
 
 # In[]
@@ -165,7 +165,7 @@ def calulate_min_avg_std(X):
 
 # In[]
 def analysis(dist_type):
-    print "analysis for ",dist_type
+    print( "analysis for ",dist_type)
     dim_X = 5
     dim_C = 6
     n_train_arr = [50, 100, 500, 1000]
@@ -176,10 +176,10 @@ def analysis(dist_type):
     num_iter = 30
     mean = 1.0/5.0
     for var in var_arr:
-        print "var=",var
+        print ("var=",var)
         data_test = getTestData(mean, var, dim_X, n_test)
         for n_train in n_train_arr:
-            print "n_train=",n_train
+            print ("n_train=",n_train)
             T = n_train + 1
             #expLoss_train = []
             #expError_train = []
@@ -199,8 +199,8 @@ def analysis(dist_type):
             
             expected_avg_risk_loss = avg_risk_loss - min_risk_loss
             expected_avg_class_error = avg_class_error
-            print "expected_avg_risk_loss",expected_avg_risk_loss
-            print "expected_avg_class_error",expected_avg_class_error
+            print ("expected_avg_risk_loss",expected_avg_risk_loss)
+            print ("expected_avg_class_error",expected_avg_class_error)
 
 dist_type = ["box","ball"]
 analysis(dist_type[0])
