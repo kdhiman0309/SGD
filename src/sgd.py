@@ -139,25 +139,44 @@ def SGD(mean, var, dim_X, dim_C,T,dist_type):
         Wt_s.append(w)
         data.append((z,y))
     w_hat = calculateWHat(Wt_s)
-    return w_hat
+    return w_hat, Wt_s, data
 
+# In[]
 def getTestData(mean, var, dim, size):
     data = []
     for i in range(size):
         z,y = oracle(mean, var, dim)
         data.append((z,y))
     return data
+
+def expectedLoss(data, w_hat):
+    loss = 0
+    for (X,y) in data:
+        loss += loss(w_hat, X, y)
+    
+    return loss / float(len(data))
+
+def expectedError(data, w_hat):
+    error = 0
+    for (X,y) in data:
+        error += 1.0 if error(w_hat, X, y) else 0.0
+    
+    return error / float(len(data))
+
+# In[]
 def analysis():
     dim_X = 5
     dim_C = 6
     n_train = [50, 100, 500, 1000]
     T = n_train + 1
     n_test = 400
-    
-    data_test = [(z,y) for i in range(n_test)]
     std = [0.05, 0.3]
     var = np.square(std)
+    
     mean = 1.0/5.0
+    data_test = getTestData(mean, var, dim_X, n_test)
+    w_hat, Wt_s, data = SGD(mean, var, dim_X, dim_C,T,dist_type)
+    
     dist_type = ["box","ball"]
     
     
