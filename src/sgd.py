@@ -106,10 +106,11 @@ def calculateWHat(W):
     return np.mean(W, axis=0).reshape((1,-1))
 
 def getAlpha(dim,T,dist_type):
+    # alpha = M / (rho * sqrt(T))
     if dist_type == "box":
-        return np.sqrt(dim)/(np.sqrt(dim)*np.sqrt(T))
+        return (2.0*np.sqrt(dim))/(np.sqrt(dim)*np.sqrt(T))
     elif dist_type =="ball":
-        return 1.0/(np.sqrt(2)*np.sqrt(T))
+        return 2.0/(np.sqrt(2)*np.sqrt(T))
     return 0
 
 def oracle(mean, var, dim):
