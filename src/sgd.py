@@ -4,11 +4,11 @@ CSE 250C HW 3
 
 """
 # In[]
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 from scipy import stats, integrate
 import matplotlib.pyplot as plt
-from __future__ import print_function
 import seaborn as sns
 
 # In[]
@@ -113,11 +113,12 @@ def getAlpha(dim,T,dist_type):
         return 2.0/(np.sqrt(2)*np.sqrt(T))
     return 0
 
-def oracle(mean, var, dim):
-    y = 1.0 if (np.random.uniform(0.0,1.0,1) > 0.5) else -1.0
+def oracle(mean, var, dim, dist_type):
+    y = 1.0 if (np.random.uniform(0.0,1.0,1) >= 0.5) else -1.0
     cov = np.identity(dim) * var
     mean = [mean*y]*dim
     z = np.random.multivariate_normal(mean, cov, 1)
+    z = project(z, dist_type)
     z = np.insert(z,0,1)
     return z, y
 
@@ -136,8 +137,8 @@ def SGD(mean, var, dim_X, dim_C, T, dist_type):
     w = np.zeros((1,dim_C))
     Wt_s.append(w)
     data = []
-    for i in xrange(1,T,1):
-        z,y = oracle(mean, var, dim_X)
+    for i in range(1,T,1):
+        z,y = oracle(mean, var, dim_X, dist_type)
         w = SGD_step(w, alpha, z, y, dist_type)
         Wt_s.append(w)
         data.append((z,y))
@@ -146,10 +147,10 @@ def SGD(mean, var, dim_X, dim_C, T, dist_type):
     return w_hat, Wt_s, data
 
 # In[]
-def getTestData(mean, var, dim, size):
+def getTestData(mean, var, dim, size, dist_type):
     data = []
     for i in range(size):
-        z,y = oracle(mean, var, dim)
+        z,y = oracle(mean, var, dim, dist_type)
         data.append((z,y))
     return data
 
@@ -171,21 +172,24 @@ def calulate_min_avg_std(X):
     return np.min(X), np.mean(X), np.std(X)
 
 # In[]
-def analysis(dist_type):
+def analysis(dist_type,file):
     print( "analysis for ",dist_type)
+ 
+
     dim_X = 5
     dim_C = 6
     n_train_arr = [50, 100, 500, 1000]
     n_test = 400
             
     std = [0.05, 0.3]
+    #std= np.linspace(0.05, 0.3, 11, True)
     var_arr = np.square(std)
     #num_iter = 30
     num_iter = 30
     mean = 1.0/5.0
     for var in var_arr:
         print ("var=",var)
-        data_test = getTestData(mean, var, dim_X, n_test)
+        data_test = getTestData(mean, var, dim_X, n_test, dist_type)
         for n_train in n_train_arr:
             print ("n_train=",n_train)
             T = n_train + 1
@@ -205,13 +209,28 @@ def analysis(dist_type):
             min_class_error, avg_class_error, std_class_error \
                             = calulate_min_avg_std(expError_test)
             
-            expected_avg_risk_loss = avg_risk_loss - min_risk_loss
+            expected_excess_risk_loss = avg_risk_loss - min_risk_loss
             expected_avg_class_error = avg_class_error
-            print ("expected_avg_risk_loss",expected_avg_risk_loss)
-            print ("expected_avg_class_error",expected_avg_class_error)
-
-dist_type = ["box","ball"]
-analysis(dist_type[0])
-analysis(dist_type[1])
+            print ("expected_excess_risk_loss = ",expected_excess_risk_loss)
+            print ("expected_avg_class_error = ",expected_avg_class_error)
+            file.write(('{0:8s}{1:12f}{2:12d}'
+                     '{3:12f}{4:12f}{5:12f}{6:14f}'
+                     '{7:12f}{8:12f}{9:12f}\n').format(  \
+                     dist_type,np.sqrt(var),n_train, \
+                     min_risk_loss,avg_risk_loss,std_risk_loss,expected_excess_risk_loss,\
+                     min_class_error,avg_class_error,std_class_error))
+# In[]
+if (__name__=="__main__"): 
+    dist_type = ["box","ball"]
+    filename="./HW3_results.txt"
+    f=open(filename,'w')
+    f.write(('Model     Sample_Std   Iteration'
+             '    Loss_Min    Loss_Ave    Loss_Std   Loss_ExRisk'
+             '    Clas_Min    Clas_Ave    Clas_Std  '
+             '\n'
+            ))   
+    analysis(dist_type[0],f)
+    analysis(dist_type[1],f)
+    f.close()
     
     
