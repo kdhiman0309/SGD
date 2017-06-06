@@ -6,11 +6,9 @@ CSE 250C HW 3
 # In[]
 from __future__ import print_function
 import numpy as np
-import pandas as pd
-from scipy import stats, integrate
 import matplotlib.pyplot as plt
-import seaborn as sns
 
+np.random.seed(10)
 # In[]
 '''
 def getDist(var, size):
@@ -37,12 +35,12 @@ def getDist(var, size):
             j1 = j1 + 1
     return X,y
 
-# In[]
+#In[]
 def plotDist(X, a=1):
     sns.set(color_codes=True)
     sns.distplot(X[:,a]);
 
-# In[]
+#In[]
 
 dist_X,dist_y = getDist(1,1000);
 #X_test,y_test   = getDist(var,n_test);
@@ -108,9 +106,9 @@ def calculateWHat(W):
 def getAlpha(dim,T,dist_type):
     # alpha = M / (rho * sqrt(T))
     if dist_type == "box":
-        return (2.0*np.sqrt(dim))/(np.sqrt(dim)*np.sqrt(T))
+        return (1.0*np.sqrt(dim))/(np.sqrt(dim)*np.sqrt(T))
     elif dist_type =="ball":
-        return 2.0/(np.sqrt(2)*np.sqrt(T))
+        return 1.0/(np.sqrt(2)*np.sqrt(T))
     return 0
 
 def oracle(mean, var, dim, dist_type):
@@ -187,9 +185,15 @@ def analysis(dist_type,file):
     #num_iter = 30
     num_iter = 30
     mean = 1.0/5.0
+    risk_error = dict()
     for var in var_arr:
         print ("var=",var)
         data_test = getTestData(mean, var, dim_X, n_test, dist_type)
+        exp_excess_risk = []
+        exp_excess_risks_std = []
+        exp_class_mean = []
+        exp_class_std  = []
+        
         for n_train in n_train_arr:
             print ("n_train=",n_train)
             T = n_train + 1
@@ -203,6 +207,8 @@ def analysis(dist_type,file):
                 #expError_train += [expectedError(data_train, w_hat)]
                 expLoss_test   += [expectedLoss(data_test, w_hat)]
                 expError_test  += [expectedError(data_test, w_hat)]
+            
+            # risk and error calculations
             min_risk_loss, avg_risk_loss, std_risk_loss \
                             = calulate_min_avg_std(expLoss_test)
             
@@ -211,26 +217,54 @@ def analysis(dist_type,file):
             
             expected_excess_risk_loss = avg_risk_loss - min_risk_loss
             expected_avg_class_error = avg_class_error
+            
+            exp_excess_risk += [expected_excess_risk_loss]
+            exp_excess_risks_std += [std_risk_loss]
+            exp_class_mean += [avg_class_error]
+            exp_class_std += [std_class_error]
+            
+            scen = 1 if dist_type=="box" else 2 
+            
             print ("expected_excess_risk_loss = ",expected_excess_risk_loss)
             print ("expected_avg_class_error = ",expected_avg_class_error)
-            file.write(('{0:8s}{1:12f}{2:12d}'
-                     '{3:12f}{4:12f}{5:12f}{6:14f}'
-                     '{7:12f}{8:12f}{9:12f}\n').format(  \
-                     dist_type,np.sqrt(var),n_train, \
-                     min_risk_loss,avg_risk_loss,std_risk_loss,expected_excess_risk_loss,\
-                     min_class_error,avg_class_error,std_class_error))
+            file.write(('{0:1d} & {1:.2f} & {2:12d} & {3:12d} & {4:12d}'
+                     ' & {5:.3e} & {6:.3e} & {7:.3e} & {8:.3e}'
+                     ' & {9:.3e} & {10:.3e} \\\\ \n').format(\
+                     scen, np.sqrt(var),n_train, n_test,30,\
+                     avg_risk_loss, std_risk_loss, min_risk_loss,expected_excess_risk_loss,\
+                     avg_class_error,std_class_error))
+        file.write("\hline\n")
+        
+        risk_error[np.sqrt(var)] = {"risk":exp_excess_risk, "risk_std":exp_excess_risks_std, \
+                   "error":exp_class_mean, "error_std":exp_class_std, "n": n_train_arr}
+    return risk_error
 # In[]
-if (__name__=="__main__"): 
-    dist_type = ["box","ball"]
-    filename="./HW3_results.txt"
-    f=open(filename,'w')
-    f.write(('Model     Sample_Std   Iteration'
-             '    Loss_Min    Loss_Ave    Loss_Std   Loss_ExRisk'
-             '    Clas_Min    Clas_Ave    Clas_Std  '
-             '\n'
-            ))   
-    analysis(dist_type[0],f)
-    analysis(dist_type[1],f)
-    f.close()
+#if (__name__=="__main__"): 
+dist_type = ["box","ball"]
+filename="./HW3_results.txt_temp"
+f=open(filename,'w')
+risk_error_box = analysis(dist_type[0],f)
+risk_error_ball = analysis(dist_type[1],f)
+f.close()
+
+# In[]
+for std, risk_error in risk_error_ball.items():
+    fig, ax = plt.subplots()
+    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"])
+    plt.ylabel("expected risk")
+    plt.xlabel("n")
+    plt.title("expected risk vs n for std="+str(std))
+    plt.savefig("exp_risk_"+str(std).replace('.','_'))
+    
+    fig, ax = plt.subplots()
+    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"])
+    plt.ylabel("expected error")
+    plt.xlabel("n")
+    plt.title("expected classification error vs n for std="+str(std))
+    plt.savefig("exp_error_"+str(std).replace('.','_'))
+    
+    plt.show()
+
+
     
     
