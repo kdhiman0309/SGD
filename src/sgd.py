@@ -9,44 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 np.random.seed(10)
-# In[]
-'''
-def getDist(var, size):
-    dim_X = 5
-    mean = 1
-    mean_n = [-mean]*dim_X
-    mean_p = [mean]*dim_X
-    ones = np.random.uniform(0.0,1.0,size) > 0.5
-    y = np.zeros(size);
-    y[ones] = 1
-    y[True^ones] = -1
-    X = np.zeros((size,dim_X))
-    cov = np.identity(dim_X) * var
-    D0 = np.random.multivariate_normal(mean_n, cov, size-np.sum(ones))
-    D1 = np.random.multivariate_normal(mean_p, cov, np.sum(ones))
-    j0=0
-    j1=0
-    for i in range(len(ones)):
-        if ones[i]==False:
-            X[i] = D0[j0]
-            j0 = j0 + 1
-        else:
-            X[i] = D1[j1]
-            j1 = j1 + 1
-    return X,y
-
-#In[]
-def plotDist(X, a=1):
-    sns.set(color_codes=True)
-    sns.distplot(X[:,a]);
-
-#In[]
-
-dist_X,dist_y = getDist(1,1000);
-#X_test,y_test   = getDist(var,n_test);
-plt.plot(dist_X[:,:2],'.')
-plt.show()
-'''
 # In[]         
 def isOutOfSet_hypercube(x):
     for x_i in x:
@@ -311,9 +273,9 @@ plt.savefig("sgd/ball_exp_theo_risk",bbox_inches='tight')
 plt.figure()
 
 # In[]
-for std, risk_error in risk_error_ball.items():
+for std, risk_error in risk_error_hypercube.items():
     fig, ax = plt.subplots()
-    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"])
+    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"], ecolor="#db6c1e")
     plt.ylabel("expected excess risk")
     plt.xlabel("#training_samples")
     plt.xticks(n)
@@ -321,7 +283,7 @@ for std, risk_error in risk_error_ball.items():
     plt.savefig("sgd/hypercube_exp_risk_"+str(std).replace('.','_'),bbox_inches='tight')
     
     fig, ax = plt.subplots()
-    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"])
+    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"], ecolor="#db6c1e")
     plt.ylabel("expected error")
     plt.xlabel("#training_samples")
     plt.xticks(n)
@@ -330,7 +292,7 @@ for std, risk_error in risk_error_ball.items():
     
 for std, risk_error in risk_error_ball.items():
     fig, ax = plt.subplots()
-    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"])
+    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"], ecolor="#db6c1e")
     plt.ylabel("expected excess risk")
     plt.xlabel("#training_samples")
     plt.xticks(n)
@@ -338,7 +300,7 @@ for std, risk_error in risk_error_ball.items():
     plt.savefig("sgd/ball_exp_risk_"+str(std).replace('.','_'),bbox_inches='tight')
     
     fig, ax = plt.subplots()
-    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"])
+    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"], ecolor="#db6c1es")
     plt.ylabel("expected error")
     plt.xlabel("#training_samples")
     plt.xticks(n)
