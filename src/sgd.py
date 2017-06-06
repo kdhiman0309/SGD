@@ -75,7 +75,7 @@ def projectBack_ball(x):
 
 def project(w, dist_type):
     w = w.reshape((-1,1))
-    if dist_type == "box":
+    if dist_type == "hypercube":
         if isOutOfSet_hypercube(w):
             return projectBack_hypercube(w)
         
@@ -103,14 +103,19 @@ def error(w,X,y):
 def calculateWHat(W):
     return np.mean(W, axis=0).reshape((1,-1))
 
+def getMRho(dim,dist_type):
+    if dist_type =="hypercube":
+        return {"M":np.sqrt(dim), "rho": np.sqrt(dim)}
+    else:
+        return {"M":1.0, "rho": np.sqrt(2.0)}
+
 def getAlpha(dim,T,dist_type):
     # alpha = M / (rho * sqrt(T))
-    if dist_type == "box":
-        return (1.0*np.sqrt(dim))/(np.sqrt(dim)*np.sqrt(T))
-    elif dist_type =="ball":
-        return 1.0/(np.sqrt(2)*np.sqrt(T))
-    return 0
-
+    M = getMRho(dim,dist_type)["M"]
+    rho = getMRho(dim,dist_type)["rho"]
+    
+    return M / (rho * np.sqrt(T))
+    
 def oracle(mean, var, dim, dist_type):
     y = 1.0 if (np.random.uniform(0.0,1.0,1) >= 0.5) else -1.0
     cov = np.identity(dim) * var
@@ -175,7 +180,7 @@ def analysis(dist_type,file):
  
 
     dim_X = 5
-    dim_C = 6
+    dim_C = dim_X + 1
     n_train_arr = [50, 100, 500, 1000]
     n_test = 400
             
@@ -223,48 +228,127 @@ def analysis(dist_type,file):
             exp_class_mean += [avg_class_error]
             exp_class_std += [std_class_error]
             
-            scen = 1 if dist_type=="box" else 2 
+            scen = 1 if dist_type=="hypercube" else 2 
             
             print ("expected_excess_risk_loss = ",expected_excess_risk_loss)
             print ("expected_avg_class_error = ",expected_avg_class_error)
-            file.write(('{0:1d} & {1:.2f} & {2:12d} & {3:12d} & {4:12d}'
-                     ' & {5:.3e} & {6:.3e} & {7:.3e} & {8:.3e}'
-                     ' & {9:.3e} & {10:.3e} \\\\ \n').format(\
-                     scen, np.sqrt(var),n_train, n_test,30,\
-                     avg_risk_loss, std_risk_loss, min_risk_loss,expected_excess_risk_loss,\
-                     avg_class_error,std_class_error))
+            if True:
+                file.write(('{0:1d} & {1:.2f} & {2:12d} & {3:12d} & {4:12d}'
+                         ' & {5:.3g} & {6:.3g} & {7:.3g} & {8:.3g}'
+                         ' & {9:.3g} & {10:.3g} \\\\ \n').format(\
+                         scen, np.sqrt(var),n_train, n_test,30,\
+                         avg_risk_loss, std_risk_loss, min_risk_loss,expected_excess_risk_loss,\
+                         avg_class_error,std_class_error))
+            if False:                
+                file.write(('{0:1d} & {1:.2f} & {2:12d} & {3:12d} & {4:12d}'
+                         ' & {5:.3e} & {6:.3e} & {7:.3e} & {8:.3e}'
+                         ' & {9:.3e} & {10:.3e} \\\\ \n').format(\
+                         scen, np.sqrt(var),n_train, n_test,30,\
+                         avg_risk_loss, std_risk_loss, min_risk_loss,expected_excess_risk_loss,\
+                         avg_class_error,std_class_error))
         file.write("\hline\n")
         
         risk_error[np.sqrt(var)] = {"risk":exp_excess_risk, "risk_std":exp_excess_risks_std, \
                    "error":exp_class_mean, "error_std":exp_class_std, "n": n_train_arr}
     return risk_error
+        
 # In[]
 #if (__name__=="__main__"): 
-dist_type = ["box","ball"]
-filename="./HW3_results.txt_temp"
+# In[]
+import os
+if not os.path.isdir("sgd"):
+    os.mkdir("sgd")
+
+# In[]
+dist_type_arr = ["hypercube","ball"]
+filename="sgd/HW3_results.txt"
 f=open(filename,'w')
-risk_error_box = analysis(dist_type[0],f)
-risk_error_ball = analysis(dist_type[1],f)
+risk_error_hypercube = analysis(dist_type_arr[0],f)
+risk_error_ball = analysis(dist_type_arr[1],f)
 f.close()
+# In[]
+if False:
+    np.save("sgd/risk_error_hypercube",risk_error_hypercube)
+    np.save("sgd/risk_error_ball",risk_error_ball)
+
+# In[]
+
+def theoriticalBounds(dim,dist_type):
+    #n_arr = list(range(50,1001,50))
+    n_arr = [50, 100, 500, 1000]
+    M = getMRho(dim,dist_type)["M"]
+    rho = getMRho(dim,dist_type)["rho"]
+    print(M,rho)
+    L = []
+    for n in n_arr:
+        T = n+1
+        L += [M*rho/np.sqrt(T)]
+    return n_arr, L
+
+fig, ax = plt.subplots()
+n,theo_loss = theoriticalBounds(6,dist_type_arr[0])
+ax.plot(n,theo_loss, label=dist_type_arr[0])
+for i, txt in enumerate(np.round(theo_loss,3)):
+    ax.annotate(txt, (n[i],theo_loss[i]))
+plt.xticks(n)
+plt.ylabel("expected risk")
+plt.xlabel("#training_samples")
+plt.legend()
+plt.title("Hypercube: Theoretical upperbound on \nexpected risk vs #training_samples")
+plt.savefig("sgd/hypercube_exp_theo_risk",bbox_inches='tight')
+
+fig, ax = plt.subplots()
+n,theo_loss = theoriticalBounds(6,dist_type_arr[1])
+ax.plot(n,theo_loss, label=dist_type_arr[1])
+for i, txt in enumerate(np.round(theo_loss,3)):
+    ax.annotate(txt, (n[i],theo_loss[i]))
+plt.xticks(n)
+plt.ylabel("expected risk")
+plt.xlabel("#training_samples")
+plt.legend()
+plt.title("Ball: Theoretical upperbound on \nexpected risk vs #training_samples")
+plt.savefig("sgd/ball_exp_theo_risk",bbox_inches='tight')
+plt.figure()
 
 # In[]
 for std, risk_error in risk_error_ball.items():
     fig, ax = plt.subplots()
     ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"])
-    plt.ylabel("expected risk")
-    plt.xlabel("n")
-    plt.title("expected risk vs n for std="+str(std))
-    plt.savefig("exp_risk_"+str(std).replace('.','_'))
+    plt.ylabel("expected excess risk")
+    plt.xlabel("#training_samples")
+    plt.xticks(n)
+    plt.title("Hypercube: expected excess risk vs \n#training_samples for std="+str(std))
+    plt.savefig("sgd/hypercube_exp_risk_"+str(std).replace('.','_'),bbox_inches='tight')
     
     fig, ax = plt.subplots()
     ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"])
     plt.ylabel("expected error")
-    plt.xlabel("n")
-    plt.title("expected classification error vs n for std="+str(std))
-    plt.savefig("exp_error_"+str(std).replace('.','_'))
+    plt.xlabel("#training_samples")
+    plt.xticks(n)
+    plt.title("Hypercube: expected classification error vs \n#training_samples for std="+str(std))
+    plt.savefig("sgd/hypercube_exp_error_"+str(std).replace('.','_'),bbox_inches='tight')
     
-    plt.show()
+for std, risk_error in risk_error_ball.items():
+    fig, ax = plt.subplots()
+    ax.errorbar(risk_error["n"], risk_error["risk"], yerr=risk_error["risk_std"])
+    plt.ylabel("expected excess risk")
+    plt.xlabel("#training_samples")
+    plt.xticks(n)
+    plt.title("Ball: expected excess risk vs \n#training_samples for std="+str(std))
+    plt.savefig("sgd/ball_exp_risk_"+str(std).replace('.','_'),bbox_inches='tight')
+    
+    fig, ax = plt.subplots()
+    ax.errorbar(risk_error["n"], risk_error["error"], yerr=risk_error["error_std"])
+    plt.ylabel("expected error")
+    plt.xlabel("#training_samples")
+    plt.xticks(n)
+    plt.title("Ball: expected classification error vs \n#training_samples for std="+str(std))
+    plt.savefig("sgd/ball_exp_error_"+str(std).replace('.','_'),bbox_inches='tight')
 
 
+plt.show()
+
+
+# In[]
     
     
